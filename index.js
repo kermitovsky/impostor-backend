@@ -4,7 +4,11 @@ const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: '*', // pozwól na połączenia z dowolnego origin (możesz ograniczyć do Netlify)
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 
@@ -33,6 +37,8 @@ io.on('connection', (socket) => {
     socket.on('startGame', (roomCode) => {
         if (rooms[roomCode]) {
             const players = rooms[roomCode].players;
+            if (players.length === 0) return;
+
             const impostorIndex = Math.floor(Math.random() * players.length);
             const secretWord = getRandomWord();
 
@@ -50,18 +56,8 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log('Rozłączono:', socket.id);
-        // Usuwanie gracza z pokoi
-        for (const room in rooms) {
-            rooms[room].players = rooms[room].players.filter(p => p.id !== socket.id);
-        }
-    });
-});
+        // Usuwanie gracza z pokoi i emitowanie nowej listy
+        for (const roomCode in rooms) {
+            const players = rooms[roomCode].players;
+            const index = players.findIndex(p
 
-function getRandomWord() {
-    const words = ['Jabłko', 'Samochód', 'Komputer', 'Morze', 'Kawa', 'Pies', 'Góra', 'Zamek'];
-    return words[Math.floor(Math.random() * words.length)];
-}
-
-server.listen(PORT, () => {
-    console.log(`Server działa na porcie ${PORT}`);
-});
